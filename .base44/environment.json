@@ -1,0 +1,12 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "OPENAI_API_KEY",
+      "description": "OpenAI API key powering HosplixAI chat replies (platform.openai.com → API keys). Optional base URL/model overrides: OPENAI_BASE_URL, OPENAI_MODEL.",
+      "requiredAtBoot": false
+    }
+  ]
+}

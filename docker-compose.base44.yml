@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hosplix
+      POSTGRES_PASSWORD: hosplix_dev
+      POSTGRES_DB: hosplix
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hosplix -d hosplix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+
+  api:
+    image: node:22-alpine
+    working_dir: /app/server
+    command: ["sh", "-ec", "npm install --no-audit --no-fund --loglevel=error && exec node --watch src/index.js"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://hosplix:hosplix_dev@db:5432/hosplix
+    env_file:
+      - /run/base44/app.env
+    volumes:
+      - ./server:/app/server
+      - server-node-modules:/app/server/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: on-failure
+
+  web:
+    image: node:22-alpine
+    working_dir: /app/client
+    command: ["sh", "-ec", "npm install --no-audit --no-fund --loglevel=error && exec npm run dev -- --host 0.0.0.0 --port 5173"]
+    environment:
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+    volumes:
+      - ./client:/app/client
+      - client-node-modules:/app/client/node_modules
+    ports:
+      - "3000:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: on-failure
+
+volumes:
+  db-data:
+  server-node-modules:
+  client-node-modules:
